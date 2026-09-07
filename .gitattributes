@@ -1,0 +1,10 @@
+# A memória e as conversas são arquivos que só crescem, linha a linha.
+# "merge=union" faz o git juntar os dois lados quando você mexeu nas duas
+# máquinas antes de sincronizar, em vez de gerar conflito e travar tudo.
+memory/**            merge=union
+historico/**/*.jsonl merge=union
+*.jsonl              merge=union
+
+# Estes são arquivos de configuração de verdade: aqui um conflito precisa
+# ser resolvido por você, não juntado automaticamente.
+claude/settings.json -merge

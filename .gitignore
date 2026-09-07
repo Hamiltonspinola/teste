@@ -1,0 +1,47 @@
+# ---------------------------------------------------------------------------
+# NUNCA versionar: credenciais e estado de login.
+# ---------------------------------------------------------------------------
+.credentials.json
+*credentials*.json
+.claude.json
+claude.json
+remote-settings.json
+policy-limits.json
+
+# Tudo que pareça segredo, em qualquer nível
+.env
+.env.*
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# ---------------------------------------------------------------------------
+# Não vale a pena sincronizar: ruído, cache e coisa que é só da máquina local.
+# ---------------------------------------------------------------------------
+history.jsonl
+stats-cache.json
+shell-snapshots/
+statsig/
+logs/
+debug/
+paste-cache/
+image-cache/
+uploads/
+usage-data/
+backups/
+sessions/
+todos/
+cache/
+file-history/
+plans/
+tasks/
+session-env/
+
+# Estado interno destes scripts
+.sync.log
+.id-maquina
+
+# Sistema
+.DS_Store
+Thumbs.db

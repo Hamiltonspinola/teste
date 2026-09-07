@@ -1,0 +1,28 @@
+{
+  "autoMemoryDirectory": "~/claude-brain/memory",
+  "cleanupPeriodDays": 180,
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/claude-brain/bin/cc-sync-pull.sh\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$HOME/claude-brain/bin/cc-sync-push.sh\"",
+            "timeout": 120
+          }
+        ]
+      }
+    ]
+  }
+}

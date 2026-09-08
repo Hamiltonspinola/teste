@@ -56,27 +56,70 @@ mkdir -p "$CLAUDE_HOME" "$BRAIN_DIR/memory" "$BRAIN_DIR/historico" "$BRAIN_DIR/c
 
 # --- Move o que existe e liga o que é compartilhado -------------------------
 
-# $1 = caminho em ~/.claude   $2 = destino dentro do repositório
+# Um diretório só com .gitkeep está vazio para os nossos fins. Sem isso, o
+# histórico que já existe nesta máquina seria arquivado em vez de aproveitado.
+tem_conteudo() {
+  [ -d "$1" ] || return 1
+  [ -n "$(find "$1" -mindepth 1 ! -name '.gitkeep' -print -quit 2>/dev/null)" ]
+}
+
+# Cópia intocada dos arquivos que vieram no repositório. Serve para saber se o
+# que está lá ainda é o modelo de fábrica ou já é conteúdo seu, vindo da outra
+# máquina.
+MODELOS="$BRAIN_DIR/.modelos"
+
+eh_modelo_de_fabrica() {
+  local arquivo="$1" nome
+  nome="$(basename "$arquivo")"
+  [ -f "$MODELOS/$nome" ] && cmp -s "$arquivo" "$MODELOS/$nome"
+}
+
+# Liga um caminho de ~/.claude ao repositório, aproveitando o que você já tem.
+#   $1 = caminho em ~/.claude    $2 = destino dentro do repositório
 ligar() {
   local alvo="$1" origem="$2"
+
+  # Já está ligado de uma instalação anterior: só refaz o link.
   if [ -L "$alvo" ]; then
     rm -f "$alvo"
-  elif [ -e "$alvo" ]; then
-    mkdir -p "$BACKUP"
-    # Se o repositório ainda está vazio nesse ponto, aproveita o conteúdo atual.
-    if [ ! -s "$origem" ] && [ -f "$alvo" ]; then
+    ln -s "$origem" "$alvo"
+    ok "$(basename "$alvo") ligado ao repositório"
+    return
+  fi
+
+  if [ -f "$alvo" ]; then
+    if eh_modelo_de_fabrica "$origem"; then
+      # O repositório ainda tem só o modelo: o seu arquivo é o que vale.
       cp "$alvo" "$origem"
       info "aproveitei o seu $(basename "$alvo") atual"
-    elif [ -d "$alvo" ] && [ -z "$(ls -A "$origem" 2>/dev/null)" ]; then
-      cp -a "$alvo/." "$origem/" 2>/dev/null || true
-      info "aproveitei o conteúdo atual de $(basename "$alvo")/"
+    elif ! cmp -s "$alvo" "$origem"; then
+      # Os dois têm conteúdo e são diferentes. Não escolho por você.
+      mkdir -p "$BACKUP"
+      cp "$alvo" "$BACKUP/$(basename "$alvo").seu"
+      info "seu $(basename "$alvo") tinha conteúdo diferente do compartilhado."
+      info "  guardei em $BACKUP/$(basename "$alvo").seu"
+      info "  abra os dois e junte o que quiser manter."
+      PENDENCIAS=$((PENDENCIAS + 1))
     fi
-    mv "$alvo" "$BACKUP/"
-    info "o antigo $(basename "$alvo") foi guardado em $BACKUP/"
+    mkdir -p "$BACKUP"; mv "$alvo" "$BACKUP/"
+
+  elif [ -d "$alvo" ]; then
+    if tem_conteudo "$alvo" && ! tem_conteudo "$origem"; then
+      cp -a "$alvo/." "$origem/" 2>/dev/null || true
+      info "aproveitei o que já existia em $(basename "$alvo")/"
+    elif tem_conteudo "$alvo" && tem_conteudo "$origem"; then
+      # Junta os dois lados: o que já está no repositório tem prioridade.
+      cp -an "$alvo/." "$origem/" 2>/dev/null || true
+      info "juntei o que existia em $(basename "$alvo")/ com o que veio da outra máquina"
+    fi
+    mkdir -p "$BACKUP"; mv "$alvo" "$BACKUP/"
   fi
+
   ln -s "$origem" "$alvo"
   ok "$(basename "$alvo") ligado ao repositório"
 }
+
+PENDENCIAS=0
 
 echo
 echo "Configuração pessoal:"
@@ -102,22 +145,45 @@ fi
 # --- Prazo de retenção ------------------------------------------------------
 
 echo
-echo "Prazo de retenção:"
-if command -v python3 >/dev/null 2>&1; then
-  python3 - "$BRAIN_DIR/claude/settings.json" "$RETENCAO_DIAS" <<'PY'
-import json, sys
-caminho, dias = sys.argv[1], int(sys.argv[2])
-with open(caminho) as f:
-    dados = json.load(f)
-dados["cleanupPeriodDays"] = dias
-dados.setdefault("autoMemoryDirectory", "~/claude-brain/memory")
-with open(caminho, "w") as f:
-    json.dump(dados, f, indent=2, ensure_ascii=False)
-    f.write("\n")
-PY
-  ok "conversas guardadas por $RETENCAO_DIAS dias (o padrão do Claude Code é 30)"
-else
-  info "python3 não encontrado — confira cleanupPeriodDays em claude/settings.json"
+echo "Sincronização automática e retenção:"
+command -v python3 >/dev/null 2>&1 || {
+  erro "python3 não encontrado — não consigo configurar a sincronização."
+  erro "Instale o python3 e rode este script de novo."
+  exit 1
+}
+python3 "$BRAIN_DIR/bin/aplicar-settings.py" "$BRAIN_DIR/claude/settings.json" "$RETENCAO_DIAS" || {
+  erro "não consegui ajustar claude/settings.json"
+  exit 1
+}
+ok "sincroniza ao abrir e ao fechar o Claude Code"
+ok "conversas guardadas por $RETENCAO_DIAS dias (o padrão do Claude Code é 30)"
+
+# --- Conferência: a instalação só vale se isto passar ----------------------
+
+echo
+echo "Conferindo:"
+falhou=0
+for arq in "$CLAUDE_HOME/CLAUDE.md" "$CLAUDE_HOME/settings.json"; do
+  if [ -L "$arq" ] && [ -e "$arq" ]; then
+    ok "$(basename "$arq") apontando para o repositório"
+  else
+    erro "$(basename "$arq") não ficou ligado"; falhou=1
+  fi
+done
+for gancho in cc-sync-pull.sh cc-sync-push.sh; do
+  if grep -q "$gancho" "$BRAIN_DIR/claude/settings.json"; then
+    ok "gancho $gancho registrado"
+  else
+    erro "gancho $gancho NAO registrado - a sincronizacao nao vai rodar"; falhou=1
+  fi
+done
+if [ "$SINCRONIZAR" = "tudo" ] && [ ! -L "$CLAUDE_HOME/projects" ]; then
+  erro "conversas não ficaram ligadas"; falhou=1
+fi
+if [ "$falhou" -ne 0 ]; then
+  echo
+  erro "instalação incompleta — nada foi perdido, mas não vai sincronizar."
+  exit 1
 fi
 
 # --- Fecho ------------------------------------------------------------------
@@ -134,6 +200,12 @@ echo "  máquina, e ao FECHAR ele envia o que você fez aqui. Sem você fazer na
 echo
 echo "  Para sincronizar na hora, sem fechar:  $BRAIN_DIR/bin/cc-sync-push.sh --forcar"
 echo
+if [ "${PENDENCIAS:-0}" -gt 0 ]; then
+  echo "  ATENÇÃO: $PENDENCIAS arquivo(s) seu(s) tinham conteúdo próprio e não"
+  echo "  foram sobrescritos nem descartados. Estão com o sufixo .seu no backup"
+  echo "  abaixo, para você juntar o que quiser manter."
+  echo
+fi
 if [ -d "${BACKUP:-}" ]; then
   echo "  Sua configuração antiga está em: $BACKUP"
   echo "  Confira que está tudo certo antes de apagar essa pasta."

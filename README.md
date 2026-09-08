@@ -19,19 +19,39 @@ Credenciais, login e caches **nunca** entram aqui — estão bloqueados no
 
 ## Instalação
 
-Faça **uma vez em cada máquina**. O repositório precisa ser **privado**.
+O repositório precisa ser **privado**. Faça **uma vez em cada máquina**.
 
 ```bash
 git clone <url-do-seu-repositorio-privado> ~/claude-brain
 ~/claude-brain/bootstrap.sh
 ```
 
+Depois **feche e abra o Claude Code** — é o que faz os ganchos de sincronização
+entrarem em vigor.
+
+Para conferir que pegou, abra o Claude Code e rode `/context`: seu `CLAUDE.md`
+precisa aparecer na lista de arquivos de memória. E fora dele:
+
+```bash
+ls -l ~/.claude/settings.json     # tem que ser um link para ~/claude-brain/
+tail ~/claude-brain/.sync.log     # mostra cada sincronização feita
+```
+
 O caminho `~/claude-brain` não é opcional: as duas máquinas usam o mesmo, e é
 isso que faz a sincronização casar.
 
-Nada é apagado. O que já existia na sua configuração é movido para
-`~/.claude/backup-claude-brain-<data>/`. Confira que está tudo certo antes de
-apagar essa pasta.
+Nada é apagado, e o que você já tinha é aproveitado: suas instruções, suas
+configurações, sua memória e suas conversas atuais passam a ser as
+compartilhadas. Uma cópia do estado anterior fica em
+`~/.claude/backup-claude-brain-<data>/` — confira antes de apagar.
+
+Se o `settings.json` desta máquina tiver conteúdo diferente do que já está
+sendo compartilhado, o script não escolhe por você: ele guarda o seu com o
+sufixo `.seu` no backup e avisa no fim, para você juntar o que quiser manter.
+
+A instalação termina com uma conferência. Se algum passo não tiver funcionado,
+o script falha e diz o quê — ele não termina com cara de sucesso sem estar
+sincronizando.
 
 ## Como usar no dia a dia
 

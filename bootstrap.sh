@@ -188,6 +188,21 @@ fi
 
 # --- Fecho ------------------------------------------------------------------
 
+# Alinha o nome da rama local com o da rama no servidor. Sem isso, o git recusa
+# o envio automático quando os nomes diferem — e o erro parece falha de rede.
+alinhar_rama() {
+  local upstream rama_remota rama_local
+  upstream="$(git -C "$BRAIN_DIR" rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)" || return 0
+  [ -n "$upstream" ] || return 0
+  rama_remota="${upstream#*/}"
+  rama_local="$(git -C "$BRAIN_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null)"
+  [ "$rama_local" = "$rama_remota" ] && return 0
+  git -C "$BRAIN_DIR" branch -M "$rama_remota" 2>/dev/null || return 0
+  git -C "$BRAIN_DIR" branch --set-upstream-to="$upstream" "$rama_remota" >/dev/null 2>&1 || true
+  info "rama local renomeada de '$rama_local' para '$rama_remota', igual à do servidor"
+}
+alinhar_rama
+
 git -C "$BRAIN_DIR" config --local core.fileMode false 2>/dev/null || true
 chmod +x "$BRAIN_DIR"/bin/*.sh 2>/dev/null || true
 

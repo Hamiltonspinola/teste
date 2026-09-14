@@ -41,6 +41,19 @@ g() { git -C "$BRAIN_DIR" "$@"; }
 
 tem_remote() { g remote get-url origin >/dev/null 2>&1; }
 
+# Para onde esta rama envia, no formato "origin main".
+#
+# Não dá para usar "git push" sem argumentos: quando o nome da rama local é
+# diferente do nome da rama no servidor — o caso de quem clonou de um lugar e
+# passou a enviar para outro — o git recusa em vez de enviar, e o erro parece
+# falha de rede.
+destino() {
+  local upstream
+  upstream="$(g rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null)" || return 1
+  [ -n "$upstream" ] || return 1
+  printf '%s %s' "${upstream%%/*}" "${upstream#*/}"
+}
+
 # O git devolve caminhos relativos ao repositório; sem resolver para caminho
 # absoluto, o teste falha e o repositório fica travado no meio de um rebase.
 em_rebase() {
@@ -65,6 +78,15 @@ enviar() {
 
   destravar || { aviso "repositório travado em $BRAIN_DIR. Rode: git -C $BRAIN_DIR rebase --abort"; return 1; }
 
+  local remoto rama
+  read -r remoto rama <<< "$(destino)"
+  if [ -z "${rama:-}" ]; then
+    aviso "esta cópia não sabe para onde enviar."
+    aviso "Resolva uma vez com:  git -C $BRAIN_DIR push -u origin HEAD:main"
+    log "sem upstream configurado"
+    return 1
+  fi
+
   g add -A >/dev/null 2>&1
   g diff --cached --quiet 2>/dev/null || g commit -q -m "$msg" >/dev/null 2>&1 || true
 
@@ -80,15 +102,16 @@ enviar() {
       fi
       sleep $((i * 2)); continue    # falha de rede: tenta de novo
     fi
-    if g push -q 2>>"$LOG"; then
-      log "enviado ($msg)"
+    if g push -q "$remoto" "HEAD:$rama" 2>>"$LOG"; then
+      log "enviado ($msg) para $remoto/$rama"
       return 0
     fi
     sleep $((i * 2))
   done
 
-  aviso "não consegui enviar (sem rede?). Seu trabalho está salvo aqui."
-  aviso "Tente depois:  $BRAIN_DIR/bin/cc-sync-push.sh --forcar"
+  aviso "não consegui enviar. Seu trabalho está salvo aqui."
+  aviso "Veja o motivo em:  tail $LOG"
+  aviso "E tente de novo com:  $BRAIN_DIR/bin/cc-sync-push.sh --forcar"
   log "falha ao enviar após 4 tentativas"
   return 1
 }

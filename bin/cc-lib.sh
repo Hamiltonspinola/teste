@@ -11,6 +11,11 @@ BRAIN_DIR="${BRAIN_DIR:-$HOME/claude-brain}"
 : "${AUTO_PUSH:=sim}"
 : "${AVISAR_SESSAO_DUPLA:=sim}"
 
+# Rodando como gancho, o git trabalha calado e o que ele disser vai para o log.
+# Rodando na mão, você precisa ver o progresso na tela — um envio grande, como
+# o primeiro, parece travado quando não mostra nada.
+if [ -t 2 ]; then SILENCIO=""; else SILENCIO="-q"; fi
+
 MARCADORES="$BRAIN_DIR/.sessoes-ativas"
 LOG="$BRAIN_DIR/.sync.log"
 
@@ -38,6 +43,12 @@ apelido() {
 
 # git só dentro do BRAIN_DIR, nunca no repositório em que você está trabalhando.
 g() { git -C "$BRAIN_DIR" "$@"; }
+
+# O progresso do git sai pelo stderr. Desviá-lo para o log sempre deixaria você
+# olhando para uma tela parada durante um envio de vários minutos.
+gop() {
+  if [ -t 2 ]; then g "$@"; else g "$@" 2>>"$LOG"; fi
+}
 
 tem_remote() { g remote get-url origin >/dev/null 2>&1; }
 
@@ -87,12 +98,24 @@ enviar() {
     return 1
   fi
 
+  # O GitHub recusa arquivo acima de 100 MB, e recusa DEPOIS de subir tudo.
+  # Melhor descobrir aqui do que após dez minutos de upload.
+  local grandes
+  grandes="$(find "$BRAIN_DIR" -path "$BRAIN_DIR/.git" -prune -o -type f -size +95M -print 2>/dev/null | head -3)"
+  if [ -n "$grandes" ]; then
+    aviso "há arquivo(s) grandes demais para o GitHub (limite de 100 MB):"
+    printf '  %s\n' $grandes >&2
+    aviso "o envio vai falhar. Apague-os ou acrescente ao .gitignore antes de tentar."
+    log "envio abortado: arquivo acima de 95 MB"
+    return 1
+  fi
+
   g add -A >/dev/null 2>&1
   g diff --cached --quiet 2>/dev/null || g commit -q -m "$msg" >/dev/null 2>&1 || true
 
   local i
   for i in 1 2 3 4; do
-    if ! g pull --rebase --autostash -q 2>>"$LOG"; then
+    if ! gop pull --rebase --autostash $SILENCIO; then
       if em_rebase; then
         destravar
         aviso "conflito entre o que você fez aqui e o que veio da outra máquina."
@@ -102,7 +125,7 @@ enviar() {
       fi
       sleep $((i * 2)); continue    # falha de rede: tenta de novo
     fi
-    if g push -q "$remoto" "HEAD:$rama" 2>>"$LOG"; then
+    if gop push $SILENCIO "$remoto" "HEAD:$rama"; then
       log "enviado ($msg) para $remoto/$rama"
       return 0
     fi
@@ -128,7 +151,7 @@ baixar() {
 
   local i
   for i in 1 2 3 4; do
-    if g pull --rebase --autostash -q 2>>"$LOG"; then
+    if gop pull --rebase --autostash $SILENCIO; then
       log "baixado"
       return 0
     fi

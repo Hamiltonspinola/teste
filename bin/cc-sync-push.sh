@@ -4,7 +4,10 @@
 
 . "${BRAIN_DIR:-$HOME/claude-brain}/bin/cc-lib.sh"
 
-ENTRADA="$(cat 2>/dev/null || true)"
+# O Claude Code entrega os dados do evento pela entrada padrão. Rodando na mão,
+# a entrada padrão é o teclado — ler dela deixaria o script parado esperando
+# você digitar, parecendo travado.
+if [ -t 0 ]; then ENTRADA=""; else ENTRADA="$(cat 2>/dev/null || true)"; fi
 PASTA="$(printf '%s' "$ENTRADA" | grep -o '"cwd"[[:space:]]*:[[:space:]]*"[^"]*"' \
   | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//')"
 

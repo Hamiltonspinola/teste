@@ -94,6 +94,52 @@ cd ~/claude-brain && git status
 
 Nada é descartado sem você mandar.
 
+## O código não viaja por aqui
+
+Isto é o mais importante deste repositório, e o erro mais caro se passar
+despercebido: **o `claude-brain` não leva o seu código.** Ele leva a memória e
+as conversas — o relato do que foi feito, por quê, e o que ficou pendente. Ele
+não guarda os arquivos alterados e não reconstrói alterações a partir do texto.
+
+São dois caminhos separados:
+
+| O quê | Por onde viaja | Quem faz |
+|---|---|---|
+| O código alterado | git, no repositório do próprio projeto | você: `commit` e `push` |
+| A memória e as conversas | este repositório | automático, ao abrir e fechar |
+
+Se você mexer nos arquivos no notebook e não der `push`, eles não existem
+alterados no PC — por mais completa que esteja a memória. Pior: o Claude vai
+*saber* que mexeu neles, não vai *ver* a mudança, e pode tentar refazer por
+cima.
+
+O ritual é curto:
+
+1. Ao sair de uma máquina: `git commit` e `git push` no projeto, nem que seja um
+   commit `wip` numa branch sua
+2. Fechar o Claude Code — o resto vai sozinho
+3. Ao chegar na outra: `git pull` no projeto
+4. Abrir o Claude Code — o resto vem sozinho
+
+Os passos 2 e 4 são automáticos. Os passos 1 e 3 são git normal, e dependem de
+você.
+
+### O aviso que te protege disso
+
+`bin/cc-git-estado.sh` olha o repositório do projeto em que a sessão está e
+avisa quando algo não bate:
+
+- **Ao abrir**, o estado é entregue ao Claude como contexto, então é ele mesmo
+  que te avisa: "este projeto tem 3 commits no servidor que não estão aqui,
+  rode `git pull` antes de eu mexer nos arquivos".
+- **Ao fechar**, o aviso aparece no terminal: você está saindo com trabalho que
+  não saiu desta máquina.
+
+Ele nunca commita nem envia nada por você — empurrar repositório de trabalho
+automaticamente é pedir problema. Ele só não deixa você sair no silêncio. Ao
+abrir, consulta o servidor com um limite de 10 segundos e sem nunca pedir senha,
+então não trava a sessão se a rede ou a VPN estiverem fora.
+
 ## Tirar conversas já enviadas
 
 Se você sincronizou com `SINCRONIZAR="tudo"` e depois mudou para `"memoria"`, o

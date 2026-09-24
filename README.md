@@ -140,6 +140,52 @@ automaticamente é pedir problema. Ele só não deixa você sair no silêncio. A
 abrir, consulta o servidor com um limite de 10 segundos e sem nunca pedir senha,
 então não trava a sessão se a rede ou a VPN estiverem fora.
 
+## Retomar uma conversa que veio da outra máquina
+
+A barra lateral do Claude Desktop lista apenas as sessões que ele próprio criou.
+Ela não varre `~/.claude/projects/` procurando transcrições colocadas ali pela
+sincronização — então uma conversa vinda da outra máquina não aparece, mesmo com
+o arquivo no lugar certo, no caminho certo.
+
+O caminho para retomá-la é o Claude Code de linha de comando, que lê direto dos
+arquivos e não tem cadastro próprio:
+
+```bash
+cd <a mesma pasta em que a conversa rodou na outra máquina>
+claude --resume
+```
+
+No seletor: `Ctrl+A` amplia para todas as pastas da máquina, `Space` mostra uma
+prévia, `Enter` abre. Se preferir buscar pelo nome, note que o seletor exibe o
+título gerado automaticamente, enquanto o Desktop exibe o título que você deu —
+guardado em `custom-title.json`, ao lado da transcrição. A mesma conversa pode
+aparecer com dois rótulos.
+
+**Para trazê-la à barra lateral do Desktop**, rode `/remote-control` dentro da
+sessão do CLI. Ela passa a aparecer no app e você comanda por lá. Mas é uma
+conexão viva com o processo do terminal, não uma importação: se você fechar o
+terminal, a sessão sai da barra.
+
+## Fechar o Claude antes de trocar de máquina
+
+O envio acontece no fechamento da sessão. Uma conversa deixada aberta não subiu:
+o que você fez nos últimos minutos continua só nesta máquina, por mais que tudo
+esteja configurado.
+
+Ao levantar da cadeira, feche o Claude Code. Se preferir não fechar:
+
+```bash
+~/claude-brain/bin/cc-sync-push.sh --forcar
+```
+
+Para conferir se algo ficou para trás:
+
+```bash
+git -C ~/claude-brain status --short historico
+```
+
+Qualquer linha começando com `M` ou `??` é conversa que ainda não saiu daqui.
+
 ## Tirar conversas já enviadas
 
 Se você sincronizou com `SINCRONIZAR="tudo"` e depois mudou para `"memoria"`, o

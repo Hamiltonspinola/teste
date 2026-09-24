@@ -4,6 +4,12 @@
 
 . "${BRAIN_DIR:-$HOME/claude-brain}/bin/cc-lib.sh"
 
+# O Claude Code entrega os dados do evento por stdin. Guardamos para saber em
+# que pasta a sessão abriu.
+ENTRADA="$(cat 2>/dev/null || true)"
+PASTA="$(printf '%s' "$ENTRADA" | grep -o '"cwd"[[:space:]]*:[[:space:]]*"[^"]*"' \
+  | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//')"
+
 baixar
 
 if [ "$AVISAR_SESSAO_DUPLA" = "sim" ]; then
@@ -29,6 +35,25 @@ if [ "$AVISAR_SESSAO_DUPLA" = "sim" ]; then
   # Agora me marco e AVISO a outra máquina (senão ela nunca fica sabendo).
   echo "$AGORA $(apelido)" > "$MARCADORES/$EU"
   enviar "sessão aberta em $(apelido)" >/dev/null 2>&1 || true
+fi
+
+# Estado do repositório de trabalho, entregue ao Claude como contexto: é ele
+# quem vai te avisar que falta um git pull antes de mexer no código.
+ESTADO="$("$BRAIN_DIR/bin/cc-git-estado.sh" "${PASTA:-$PWD}" abrindo 2>/dev/null)"
+if [ -n "$ESTADO" ] && command -v python3 >/dev/null 2>&1; then
+  ESTADO="$ESTADO" python3 - <<'PY'
+import json, os
+
+texto = (
+    "AVISO DE SINCRONIZAÇÃO: " + os.environ["ESTADO"].strip() + " "
+    "O código deste projeto não viaja pela memória compartilhada — só por git. "
+    "Avise o usuário disso antes de alterar qualquer arquivo aqui."
+)
+print(json.dumps({"hookSpecificOutput": {
+    "hookEventName": "SessionStart",
+    "additionalContext": texto,
+}}))
+PY
 fi
 
 exit 0

@@ -4,6 +4,15 @@
 
 . "${BRAIN_DIR:-$HOME/claude-brain}/bin/cc-lib.sh"
 
+ENTRADA="$(cat 2>/dev/null || true)"
+PASTA="$(printf '%s' "$ENTRADA" | grep -o '"cwd"[[:space:]]*:[[:space:]]*"[^"]*"' \
+  | head -1 | sed 's/.*:[[:space:]]*"//;s/"$//')"
+
+# Você está saindo desta máquina. O que não estiver commitado e enviado não
+# existe na outra, por mais completa que esteja a memória.
+ESTADO="$("$BRAIN_DIR/bin/cc-git-estado.sh" "${PASTA:-$PWD}" fechando 2>/dev/null)"
+[ -n "$ESTADO" ] && aviso "$ESTADO"
+
 EU="$(maquina)"
 
 # Libera o marcador desta máquina: ela não está mais com sessão aberta.

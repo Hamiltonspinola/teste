@@ -171,7 +171,11 @@ ligar "$CLAUDE_HOME/rules"         "$BRAIN_DIR/claude/rules"
 
 echo
 echo "Memória:"
-ok "as anotações do Claude vão para $BRAIN_DIR/memory (via autoMemoryDirectory)"
+if [ "$SINCRONIZAR" = "tudo" ]; then
+  ok "a memória de cada projeto viaja junto com as conversas dele, separada por projeto"
+else
+  ok "as anotações do Claude vão para $BRAIN_DIR/memory (via autoMemoryDirectory)"
+fi
 
 echo
 echo "Histórico das conversas:"
@@ -191,7 +195,7 @@ command -v python3 >/dev/null 2>&1 || {
   erro "Instale o python3 e rode este script de novo."
   exit 1
 }
-python3 "$BRAIN_DIR/bin/aplicar-settings.py" "$BRAIN_DIR/claude/settings.json" "$RETENCAO_DIAS" || {
+python3 "$BRAIN_DIR/bin/aplicar-settings.py" "$BRAIN_DIR/claude/settings.json" "$RETENCAO_DIAS" "$SINCRONIZAR" || {
   erro "não consegui ajustar claude/settings.json"
   exit 1
 }

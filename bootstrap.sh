@@ -119,6 +119,46 @@ ligar() {
   ok "$(basename "$alvo") ligado ao repositório"
 }
 
+# Desfaz o compartilhamento das conversas, devolvendo-as para esta máquina.
+#
+# Serve para quem instalou com SINCRONIZAR="tudo" e depois mudou de ideia: sem
+# isso, ~/.claude/projects continuaria sendo um link para dentro do repositório
+# e as conversas seguiriam sendo enviadas, apesar da configuração dizer o
+# contrário.
+desligar_historico() {
+  local alvo="$CLAUDE_HOME/projects"
+
+  if [ ! -L "$alvo" ]; then
+    info "modo \"memoria\": as conversas ficam locais nesta máquina"
+    return
+  fi
+
+  local destino
+  destino="$(readlink -f "$alvo" 2>/dev/null || readlink "$alvo")"
+  case "$destino" in
+    "$BRAIN_DIR"/*) ;;
+    *) info "modo \"memoria\": as conversas ficam locais nesta máquina"; return ;;
+  esac
+
+  # Traz as conversas de volta para o disco local, antes de cortar o vínculo.
+  rm -f "$alvo"
+  mkdir -p "$alvo"
+  if [ -d "$destino" ]; then
+    cp -a "$destino/." "$alvo/" 2>/dev/null || true
+    find "$alvo" -name '.gitkeep' -delete 2>/dev/null || true
+  fi
+  ok "conversas devolvidas para $alvo, nesta máquina"
+
+  # Tira as conversas do repositório, para não continuarem sendo enviadas.
+  if [ -n "$(find "$destino" -mindepth 1 ! -name '.gitkeep' -print -quit 2>/dev/null)" ]; then
+    find "$destino" -mindepth 1 ! -name '.gitkeep' -delete 2>/dev/null || true
+    : > "$destino/.gitkeep"
+    git -C "$BRAIN_DIR" add -A historico >/dev/null 2>&1 || true
+    ok "conversas removidas do repositório (a memória continua sincronizando)"
+    PENDENCIAS_HISTORICO=1
+  fi
+}
+
 PENDENCIAS=0
 
 echo
@@ -139,7 +179,7 @@ if [ "$SINCRONIZAR" = "tudo" ]; then
   ligar "$CLAUDE_HOME/projects" "$BRAIN_DIR/historico"
   ok "as conversas passam a ser compartilhadas entre as duas máquinas"
 else
-  info "modo \"memoria\": as conversas ficam locais nesta máquina"
+  desligar_historico
 fi
 
 # --- Prazo de retenção ------------------------------------------------------
@@ -215,6 +255,12 @@ echo "  máquina, e ao FECHAR ele envia o que você fez aqui. Sem você fazer na
 echo
 echo "  Para sincronizar na hora, sem fechar:  $BRAIN_DIR/bin/cc-sync-push.sh --forcar"
 echo
+if [ "${PENDENCIAS_HISTORICO:-0}" -eq 1 ]; then
+  echo "  As conversas saíram do repositório a partir de agora, mas os commits"
+  echo "  antigos ainda as contêm. Para apagá-las de verdade, veja a seção"
+  echo "  \"Tirar conversas já enviadas\" no README."
+  echo
+fi
 if [ "${PENDENCIAS:-0}" -gt 0 ]; then
   echo "  ATENÇÃO: $PENDENCIAS arquivo(s) seu(s) tinham conteúdo próprio e não"
   echo "  foram sobrescritos nem descartados. Estão com o sufixo .seu no backup"

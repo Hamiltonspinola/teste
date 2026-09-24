@@ -94,6 +94,50 @@ cd ~/claude-brain && git status
 
 Nada é descartado sem você mandar.
 
+## Tirar conversas já enviadas
+
+Se você sincronizou com `SINCRONIZAR="tudo"` e depois mudou para `"memoria"`, o
+`bootstrap.sh` devolve as conversas para esta máquina e para de enviá-las. Mas
+os commits antigos continuam contendo o que já foi enviado — apagar um arquivo
+no git não apaga o passado dele.
+
+Para eliminar de verdade, escolha um dos dois.
+
+**Apagar e recriar o repositório** — o mais completo, e o mais simples enquanto
+o repositório é novo e só guarda isto. No GitHub, Settings → Danger Zone →
+Delete this repository. Crie de novo com o mesmo nome, privado e vazio, e:
+
+```bash
+cd ~/claude-brain
+rm -rf .git
+git init -b main
+git add -A
+git commit -m "memória compartilhada"
+git remote add origin git@github-pessoal:<voce>/claude-brain.git
+git push -u origin main
+```
+
+Na outra máquina, apague `~/claude-brain` e clone de novo.
+
+**Ou reescrever o histórico**, mantendo o repositório:
+
+```bash
+cd ~/claude-brain
+git checkout --orphan limpo
+git add -A
+git commit -m "memória compartilhada"
+git branch -D main && git branch -m main
+git push -f origin main
+```
+
+Na outra máquina, apague `~/claude-brain` e clone de novo — o histórico antigo
+não existe mais, e um `git pull` ali daria conflito.
+
+Em ambos os casos, o GitHub ainda pode guardar os objetos soltos por algum tempo
+antes de coletá-los. Para um repositório privado seu isso costuma bastar; se o
+que vazou for grave a ponto de não bastar, trate como vazamento de segredo:
+troque o que for credencial, em vez de apenas apagar o arquivo.
+
 ## Configuração
 
 Tudo o que você pode querer mudar está em `config.sh`:

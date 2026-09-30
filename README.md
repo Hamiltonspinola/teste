@@ -188,34 +188,40 @@ Qualquer linha começando com `M` ou `??` é conversa que ainda não saiu daqui.
 
 ## Escolher quais conversas sincronizam
 
-Por padrão tudo sincroniza. Para escolher, use `bin/cc-conversas.sh`.
+Por padrão tudo sincroniza. Para escolher, use `/conversas` de dentro de uma
+sessão do Claude, ou `bin/cc-conversas.sh` no terminal — são a mesma coisa.
 
-As conversas são agrupadas pela pasta em que a sessão foi aberta — não pelo
-assunto. Uma conversa sobre um projeto, mas iniciada na sua pasta de usuário,
-pertence ao grupo da pasta de usuário.
-
-```bash
-~/claude-brain/bin/cc-conversas.sh
+```
+/conversas
 ```
 
 ```
-SITUAÇÃO    TAMANHO  CONV.  PASTA
-----------  -------  -----  -----
-sincroniza      24K      3  /home/hamil/vitru-api-template-sf/projects/gioconda-parametrizacao
-                              -home-hamil-vitru-api-template-sf-projects-gioconda-parametrizacao
-ignorado       126M     41  /home/hamil
-                              -home-hamil
+[sincroniza] /home/hamil  (126.4M, 41 conversa(s))
+             grupo: -home-hamil
+  ✓  Analisar disciplinas não carregadas em matrículas EAD  (3.1M)
+  ✗  Rascunhos soltos  (820K)
+
+[sincroniza] /home/hamil/vitru-api-template-sf/projects/gioconda-parametrizacao
+             grupo: -home-hamil-vitru-api-template-sf-projects-gioconda-parametrizacao
+  ✓  Parametrização de grade curricular  (173K)
 ```
 
-A listagem mostra o caminho de verdade, lido de dentro das conversas. O nome do
-grupo, na linha abaixo, é o que você passa nos comandos — ele é ilegível porque
-o Claude Code troca tanto `/` quanto `-` pelo mesmo caractere, o que torna o
-nome ambíguo e impossível de decodificar com segurança.
+Cada conversa aparece pelo nome — inclusive o título que você deu pelo app, que
+fica guardado em `custom-title.json` ao lado da transcrição. As conversas são
+agrupadas pela pasta em que a sessão foi aberta, não pelo assunto: uma conversa
+sobre um projeto, mas iniciada na sua pasta de usuário, pertence ao grupo da
+pasta de usuário.
 
-```bash
-~/claude-brain/bin/cc-conversas.sh ignorar -home-hamil
-~/claude-brain/bin/cc-conversas.sh incluir -home-hamil
+Para ligar e desligar, passe parte do nome:
+
 ```
+/conversas ignorar Disciplinas convalidadas
+/conversas incluir Disciplinas convalidadas
+```
+
+Se a busca casar com mais de uma conversa, o comando lista as candidatas e não
+faz nada — ele nunca escolhe por você. Para tratar um grupo inteiro de uma vez,
+passe o nome do grupo no lugar do nome da conversa.
 
 Ignorar **não apaga nada**: os arquivos continuam nesta máquina e você segue
 usando as conversas normalmente aqui. Elas apenas param de viajar para a outra
@@ -229,7 +235,7 @@ Dois casos em que isso rende:
 - **Peso.** Sessões abertas na pasta de usuário costumam concentrar quase todo o
   tamanho do repositório, e são justamente as que menos interessa retomar na
   outra máquina.
-- **Separar trabalho de pessoal.** Ignorar os grupos de um cliente mantém as
+- **Separar trabalho de pessoal.** Ignorar as conversas de um cliente mantém as
   transcrições dele apenas na máquina onde foram feitas.
 
 Ignorar não apaga o que já foi enviado antes: veja

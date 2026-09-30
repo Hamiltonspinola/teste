@@ -165,9 +165,11 @@ echo
 echo "Configuração pessoal:"
 [ -f "$BRAIN_DIR/claude/CLAUDE.md" ]     || : > "$BRAIN_DIR/claude/CLAUDE.md"
 [ -f "$BRAIN_DIR/claude/settings.json" ] || echo '{}' > "$BRAIN_DIR/claude/settings.json"
+mkdir -p "$BRAIN_DIR/claude/commands"
 ligar "$CLAUDE_HOME/CLAUDE.md"     "$BRAIN_DIR/claude/CLAUDE.md"
 ligar "$CLAUDE_HOME/settings.json" "$BRAIN_DIR/claude/settings.json"
 ligar "$CLAUDE_HOME/rules"         "$BRAIN_DIR/claude/rules"
+ligar "$CLAUDE_HOME/commands"      "$BRAIN_DIR/claude/commands"
 
 echo
 echo "Memória:"

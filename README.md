@@ -186,6 +186,55 @@ git -C ~/claude-brain status --short historico
 
 Qualquer linha começando com `M` ou `??` é conversa que ainda não saiu daqui.
 
+## Escolher quais conversas sincronizam
+
+Por padrão tudo sincroniza. Para escolher, use `bin/cc-conversas.sh`.
+
+As conversas são agrupadas pela pasta em que a sessão foi aberta — não pelo
+assunto. Uma conversa sobre um projeto, mas iniciada na sua pasta de usuário,
+pertence ao grupo da pasta de usuário.
+
+```bash
+~/claude-brain/bin/cc-conversas.sh
+```
+
+```
+SITUAÇÃO    TAMANHO  CONV.  PASTA
+----------  -------  -----  -----
+sincroniza      24K      3  /home/hamil/vitru-api-template-sf/projects/gioconda-parametrizacao
+                              -home-hamil-vitru-api-template-sf-projects-gioconda-parametrizacao
+ignorado       126M     41  /home/hamil
+                              -home-hamil
+```
+
+A listagem mostra o caminho de verdade, lido de dentro das conversas. O nome do
+grupo, na linha abaixo, é o que você passa nos comandos — ele é ilegível porque
+o Claude Code troca tanto `/` quanto `-` pelo mesmo caractere, o que torna o
+nome ambíguo e impossível de decodificar com segurança.
+
+```bash
+~/claude-brain/bin/cc-conversas.sh ignorar -home-hamil
+~/claude-brain/bin/cc-conversas.sh incluir -home-hamil
+```
+
+Ignorar **não apaga nada**: os arquivos continuam nesta máquina e você segue
+usando as conversas normalmente aqui. Elas apenas param de viajar para a outra
+máquina — as que já existem e as que você criar depois.
+
+A escolha fica em `historico/.gitignore`, que é sincronizado. Então ela vale nas
+duas máquinas, e não só onde você a fez.
+
+Dois casos em que isso rende:
+
+- **Peso.** Sessões abertas na pasta de usuário costumam concentrar quase todo o
+  tamanho do repositório, e são justamente as que menos interessa retomar na
+  outra máquina.
+- **Separar trabalho de pessoal.** Ignorar os grupos de um cliente mantém as
+  transcrições dele apenas na máquina onde foram feitas.
+
+Ignorar não apaga o que já foi enviado antes: veja
+[Tirar conversas já enviadas](#tirar-conversas-já-enviadas).
+
 ## Tirar conversas já enviadas
 
 Se você sincronizou com `SINCRONIZAR="tudo"` e depois mudou para `"memoria"`, o
